@@ -1,0 +1,29 @@
+[package]
+name = "worldforge"
+version = "0.1.0"
+description = "WorldForge - Fantasy World Building Desktop App"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "worldforge_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "1", features = [] }
+
+[dependencies]
+tauri = { version = "1", features = ["dialog-all", "fs-all", "shell-open"] }
+tauri-plugin-sql = { git = "https://github.com/tauri-apps/tauri-plugin-sql", branch = "v1", features = ["sqlite"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
