@@ -1,6 +1,6 @@
 // src/lib/db.ts — SQLite database layer via Tauri plugin-sql
 
-import Database from "tauri-plugin-sql-api";
+import Database from "@tauri-apps/plugin-sql";
 import type {
   World, Calendar, Category, Tag, Page, PageLink,
   WorldMap, MapPin, TimelineEvent

@@ -1,8 +1,6 @@
-// src-tauri/src/main.rs
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    let context = tauri::generate_context!();
     tauri::Builder::default()
         .plugin(tauri_plugin_sql::Builder::default()
             .add_migrations("sqlite:worldforge.db", vec![
@@ -15,6 +13,6 @@ fn main() {
             ])
             .build()
         )
-        .run(context)
+        .run(tauri::generate_context!())
         .expect("error while running WorldForge");
 }
