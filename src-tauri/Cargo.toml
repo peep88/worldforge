@@ -5,10 +5,6 @@ description = "WorldForge - Fantasy World Building Desktop App"
 authors = ["you"]
 edition = "2021"
 
-[lib]
-name = "worldforge_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
-
 [build-dependencies]
 tauri-build = { version = "1", features = [] }
 
