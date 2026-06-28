@@ -3,9 +3,9 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Plus, Trash2, Edit2, X, Link2, Calendar, Clock } from "lucide-react";
 import { useAppStore } from "@/store";
 import { timelineDb, calendarDb } from "@/lib/db";
-import type { TimelineEvent, EventCategory, FantasyDate, CalendarSchema } from "@/types";
+import type { TimelineEvent, EventCategory, FantasyDate, CalendarSchema, Page } from "@/types";
 
-const CATEGORY_COLORS: Record<EventCategory, string> = {
+const CATEGORY_COLORS: Record<string, string> = {
   event:      "#c4933f",
   era:        "#8b6fad",
   battle:     "#c0392b",
@@ -17,7 +17,7 @@ const CATEGORY_COLORS: Record<EventCategory, string> = {
   custom:     "#7a3d7a",
 };
 
-const CATEGORY_LABELS: Record<EventCategory, string> = {
+const CATEGORY_LABELS: Record<string, string> = {
   event: "Event", era: "Era", battle: "Battle", birth: "Birth",
   death: "Death", discovery: "Discovery", political: "Political",
   natural: "Natural", custom: "Custom",
@@ -30,8 +30,7 @@ export default function TimelineModule() {
   const [selected, setSelected] = useState<TimelineEvent | null>(null);
   const [editing, setEditing] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [filterCat, setFilterCat] = useState<EventCategory | "all">("all");
-  const [viewMode, setViewMode] = useState<"list" | "visual">("list");
+  const [filterCat, setFilterCat] = useState<string>("all");
 
   useEffect(() => {
     if (activeWorld) {
@@ -71,12 +70,11 @@ export default function TimelineModule() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* Left panel — event list */}
+      {/* Left panel */}
       <div
         className="w-72 shrink-0 flex flex-col overflow-hidden"
         style={{ background: 'var(--forge-surface)', borderRight: '1px solid var(--forge-border)' }}
       >
-        {/* Header */}
         <div className="px-3 py-2.5 border-b flex items-center justify-between"
              style={{ borderColor: 'var(--forge-border)' }}>
           <span className="forge-title text-sm font-semibold" style={{ color: 'var(--forge-text)' }}>
@@ -90,10 +88,10 @@ export default function TimelineModule() {
         {/* Category filter */}
         <div className="px-2 py-2 border-b flex gap-1 flex-wrap" style={{ borderColor: 'var(--forge-border)' }}>
           <FilterChip label="All" active={filterCat === "all"} onClick={() => setFilterCat("all")} />
-          {(Object.keys(CATEGORY_LABELS) as EventCategory[]).map(cat => (
+          {Object.entries(CATEGORY_LABELS).map(([cat, label]) => (
             <FilterChip
               key={cat}
-              label={CATEGORY_LABELS[cat]}
+              label={label}
               active={filterCat === cat}
               color={CATEGORY_COLORS[cat]}
               onClick={() => setFilterCat(cat)}
@@ -107,7 +105,7 @@ export default function TimelineModule() {
             <div className="px-4 py-8 text-center">
               <Clock size={28} className="mx-auto mb-2" style={{ color: 'var(--forge-muted)' }} />
               <p className="text-xs" style={{ color: 'var(--forge-subtle)' }}>
-                No events yet. Add one to begin chronicling your world's history.
+                No events yet. Add one to begin chronicling history.
               </p>
             </div>
           ) : sortedEvents.map(event => (
@@ -123,7 +121,7 @@ export default function TimelineModule() {
         </div>
       </div>
 
-      {/* Right — visual timeline + detail panel */}
+      {/* Right panel */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Visual timeline */}
         <div
@@ -134,18 +132,21 @@ export default function TimelineModule() {
             minHeight: '140px',
           }}
         >
-          <VisualTimeline events={sortedEvents} calendar={calendar} selected={selected} onSelect={setSelected} />
+          <VisualTimeline
+            events={sortedEvents}
+            calendar={calendar}
+            selected={selected}
+            onSelect={setSelected}
+          />
         </div>
 
-        {/* Detail / edit panel */}
+        {/* Detail panel */}
         <div className="flex-1 overflow-y-auto p-6">
           {showForm ? (
             <EventForm
-              worldId={activeWorld?.id ?? ""}
               calendar={calendar}
-              pages={pages}
               onSave={async (data) => {
-                const id = await timelineDb.create({
+                await timelineDb.create({
                   ...data,
                   world_id: activeWorld?.id ?? "",
                   sort_index: events.length,
@@ -209,14 +210,8 @@ function VisualTimeline({ events, calendar, selected, onSelect }: {
 
   return (
     <div className="relative" style={{ width: W, height: 100 }}>
-      {/* Timeline spine */}
-      <div
-        className="absolute"
-        style={{
-          left: 40, right: 40, top: 50, height: 2,
-          background: 'var(--forge-border)',
-        }}
-      />
+      {/* Spine */}
+      <div className="absolute" style={{ left: 40, right: 40, top: 50, height: 2, background: 'var(--forge-border)' }} />
 
       {/* Year markers */}
       {Array.from({ length: Math.min(10, range + 1) }, (_, i) => {
@@ -225,9 +220,7 @@ function VisualTimeline({ events, calendar, selected, onSelect }: {
         return (
           <div key={year} className="absolute" style={{ left: x, top: 55 }}>
             <div style={{ width: 1, height: 8, background: 'var(--forge-muted)', marginLeft: -0.5 }} />
-            <div className="text-xs mt-1" style={{
-              color: 'var(--forge-subtle)', transform: 'translateX(-50%)', whiteSpace: 'nowrap'
-            }}>
+            <div className="text-xs mt-1" style={{ color: 'var(--forge-subtle)', transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>
               {year}
             </div>
           </div>
@@ -239,6 +232,7 @@ function VisualTimeline({ events, calendar, selected, onSelect }: {
         const date = JSON.parse(event.start_date) as FantasyDate;
         const x = range === 0 ? W / 2 : 40 + (date.year - minYear) / range * (W - 80);
         const isAbove = i % 2 === 0;
+        const color = CATEGORY_COLORS[event.category] ?? 'var(--forge-accent)';
 
         return (
           <button
@@ -251,9 +245,9 @@ function VisualTimeline({ events, calendar, selected, onSelect }: {
               <div
                 className="text-xs font-medium mb-1 whitespace-nowrap px-1.5 py-0.5 rounded"
                 style={{
-                  background: selected?.id === event.id ? CATEGORY_COLORS[event.category as EventCategory] : 'var(--forge-elevated)',
+                  background: selected?.id === event.id ? color : 'var(--forge-elevated)',
                   color: selected?.id === event.id ? '#fff' : 'var(--forge-text)',
-                  border: `1px solid ${CATEGORY_COLORS[event.category as EventCategory]}`,
+                  border: `1px solid ${color}`,
                   fontSize: '10px',
                 }}
               >
@@ -264,8 +258,8 @@ function VisualTimeline({ events, calendar, selected, onSelect }: {
               className="rounded-full border-2"
               style={{
                 width: 12, height: 12,
-                background: CATEGORY_COLORS[event.category as EventCategory],
-                borderColor: selected?.id === event.id ? 'white' : CATEGORY_COLORS[event.category as EventCategory],
+                background: color,
+                borderColor: selected?.id === event.id ? 'white' : color,
                 boxShadow: selected?.id === event.id ? '0 0 0 2px white' : 'none',
               }}
             />
@@ -273,9 +267,9 @@ function VisualTimeline({ events, calendar, selected, onSelect }: {
               <div
                 className="text-xs font-medium mt-1 whitespace-nowrap px-1.5 py-0.5 rounded"
                 style={{
-                  background: selected?.id === event.id ? CATEGORY_COLORS[event.category as EventCategory] : 'var(--forge-elevated)',
+                  background: selected?.id === event.id ? color : 'var(--forge-elevated)',
                   color: selected?.id === event.id ? '#fff' : 'var(--forge-text)',
-                  border: `1px solid ${CATEGORY_COLORS[event.category as EventCategory]}`,
+                  border: `1px solid ${color}`,
                   fontSize: '10px',
                 }}
               >
@@ -291,11 +285,14 @@ function VisualTimeline({ events, calendar, selected, onSelect }: {
 
 // ── Event list item ──
 function EventListItem({ event, calendar, active, onClick, onDelete }: {
-  event: TimelineEvent; calendar: CalendarSchema | null;
-  active: boolean; onClick: () => void; onDelete: () => void;
+  event: TimelineEvent;
+  calendar: CalendarSchema | null;
+  active: boolean;
+  onClick: () => void;
+  onDelete: () => void;
 }) {
   const date = JSON.parse(event.start_date) as FantasyDate;
-  const color = CATEGORY_COLORS[event.category as EventCategory] ?? 'var(--forge-accent)';
+  const color = CATEGORY_COLORS[event.category] ?? 'var(--forge-accent)';
 
   return (
     <div
@@ -305,19 +302,16 @@ function EventListItem({ event, calendar, active, onClick, onDelete }: {
         borderLeftColor: active ? color : 'transparent',
         background: active ? 'var(--forge-muted)' : 'transparent',
       }}
-      onMouseEnter={e => { if (!active) (e.currentTarget.style.background = 'var(--forge-elevated)'; }}
-      onMouseLeave={e => { if (!active) (e.currentTarget.style.background = 'transparent'; }}
+      onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--forge-elevated)'; }}
+      onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
     >
-      <div
-        className="w-2.5 h-2.5 rounded-full shrink-0 mt-1"
-        style={{ background: color }}
-      />
+      <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-1" style={{ background: color }} />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate" style={{ color: 'var(--forge-text)' }}>
           {event.title}
         </div>
         <div className="text-xs mt-0.5" style={{ color: 'var(--forge-subtle)' }}>
-          {formatFantasyDate(date, calendar)} · {CATEGORY_LABELS[event.category as EventCategory]}
+          {formatFantasyDate(date, calendar)} · {CATEGORY_LABELS[event.category] ?? event.category}
         </div>
       </div>
       <button
@@ -332,26 +326,30 @@ function EventListItem({ event, calendar, active, onClick, onDelete }: {
 
 // ── Event detail ──
 function EventDetail({ event, calendar, pages, editing, onEdit, onSave, onCancel, onDelete }: {
-  event: TimelineEvent; calendar: CalendarSchema | null;
-  pages: import("@/types").Page[]; editing: boolean;
-  onEdit: () => void; onSave: (d: Partial<TimelineEvent>) => void;
-  onCancel: () => void; onDelete: () => void;
+  event: TimelineEvent;
+  calendar: CalendarSchema | null;
+  pages: Page[];
+  editing: boolean;
+  onEdit: () => void;
+  onSave: (d: Partial<TimelineEvent>) => void;
+  onCancel: () => void;
+  onDelete: () => void;
 }) {
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description);
-  const [category, setCategory] = useState(event.category as EventCategory);
+  const [category, setCategory] = useState(event.category);
   const [startDate, setStartDate] = useState<FantasyDate>(JSON.parse(event.start_date));
   const [color, setColor] = useState(event.color);
 
   useEffect(() => {
     setTitle(event.title);
     setDescription(event.description);
-    setCategory(event.category as EventCategory);
+    setCategory(event.category);
     setStartDate(JSON.parse(event.start_date));
     setColor(event.color);
   }, [event.id]);
 
-  const eventColor = CATEGORY_COLORS[event.category as EventCategory];
+  const eventColor = CATEGORY_COLORS[event.category] ?? 'var(--forge-accent)';
   const linkedPages = JSON.parse(event.linked_pages) as string[];
   const linked = pages.filter(p => linkedPages.includes(p.id));
 
@@ -362,7 +360,7 @@ function EventDetail({ event, calendar, pages, editing, onEdit, onSave, onCancel
           <div className="flex items-center gap-2 mb-1">
             <div className="w-3 h-3 rounded-full" style={{ background: eventColor }} />
             <span className="text-xs font-medium uppercase tracking-wider" style={{ color: eventColor }}>
-              {CATEGORY_LABELS[event.category as EventCategory]}
+              {CATEGORY_LABELS[event.category] ?? event.category}
             </span>
           </div>
           <h2 className="forge-title text-xl font-bold" style={{ color: 'var(--forge-text)' }}>
@@ -396,9 +394,8 @@ function EventDetail({ event, calendar, pages, editing, onEdit, onSave, onCancel
           </div>
           <div className="flex flex-wrap gap-2">
             {linked.map(p => (
-              <span key={p.id} className="text-xs px-2 py-1 rounded" style={{
-                background: 'var(--forge-muted)', color: 'var(--forge-accent)',
-              }}>
+              <span key={p.id} className="text-xs px-2 py-1 rounded"
+                    style={{ background: 'var(--forge-muted)', color: 'var(--forge-accent)' }}>
                 <Link2 size={10} className="inline mr-1" />{p.title}
               </span>
             ))}
@@ -410,9 +407,7 @@ function EventDetail({ event, calendar, pages, editing, onEdit, onSave, onCancel
 
   return (
     <div>
-      <h3 className="forge-title font-semibold mb-4" style={{ color: 'var(--forge-accent)' }}>
-        Edit Event
-      </h3>
+      <h3 className="forge-title font-semibold mb-4" style={{ color: 'var(--forge-accent)' }}>Edit Event</h3>
       <div className="space-y-3">
         <div>
           <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--forge-subtle)' }}>Title</label>
@@ -420,9 +415,8 @@ function EventDetail({ event, calendar, pages, editing, onEdit, onSave, onCancel
         </div>
         <div>
           <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--forge-subtle)' }}>Category</label>
-          <select className="forge-input" value={category}
-                  onChange={e => setCategory(e.target.value as EventCategory)}>
-            {(Object.entries(CATEGORY_LABELS) as [EventCategory, string][]).map(([k, v]) => (
+          <select className="forge-input" value={category} onChange={e => setCategory(e.target.value)}>
+            {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}
           </select>
@@ -437,7 +431,7 @@ function EventDetail({ event, calendar, pages, editing, onEdit, onSave, onCancel
             <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--forge-subtle)' }}>Month</label>
             <select className="forge-input" value={startDate.month}
                     onChange={e => setStartDate(d => ({ ...d, month: +e.target.value }))}>
-              {(calendar?.months ?? [{ name: 'Month 1' }]).map((m, i) => (
+              {(calendar?.months ?? []).map((m, i) => (
                 <option key={i} value={i + 1}>{m.name}</option>
               ))}
             </select>
@@ -467,16 +461,15 @@ function EventDetail({ event, calendar, pages, editing, onEdit, onSave, onCancel
   );
 }
 
-// ── Event form (new) ──
-function EventForm({ worldId, calendar, pages, onSave, onCancel }: {
-  worldId: string; calendar: CalendarSchema | null;
-  pages: import("@/types").Page[];
+// ── New event form ──
+function EventForm({ calendar, onSave, onCancel }: {
+  calendar: CalendarSchema | null;
   onSave: (d: Omit<TimelineEvent, 'id' | 'world_id' | 'created_at' | 'sort_index'>) => void;
   onCancel: () => void;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<EventCategory>("event");
+  const [category, setCategory] = useState("event");
   const [year, setYear] = useState(1000);
   const [month, setMonth] = useState(1);
   const [day, setDay] = useState(1);
@@ -489,7 +482,7 @@ function EventForm({ worldId, calendar, pages, onSave, onCancel }: {
       category,
       start_date: JSON.stringify({ year, month, day }),
       end_date: null,
-      color: CATEGORY_COLORS[category],
+      color: CATEGORY_COLORS[category] ?? '#c4933f',
       linked_pages: "[]",
     });
   }
@@ -508,9 +501,8 @@ function EventForm({ worldId, calendar, pages, onSave, onCancel }: {
         </div>
         <div>
           <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--forge-subtle)' }}>Category</label>
-          <select className="forge-input" value={category}
-                  onChange={e => setCategory(e.target.value as EventCategory)}>
-            {(Object.entries(CATEGORY_LABELS) as [EventCategory, string][]).map(([k, v]) => (
+          <select className="forge-input" value={category} onChange={e => setCategory(e.target.value)}>
+            {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}
           </select>
@@ -518,8 +510,7 @@ function EventForm({ worldId, calendar, pages, onSave, onCancel }: {
         <div className="grid grid-cols-3 gap-2">
           <div>
             <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--forge-subtle)' }}>Year</label>
-            <input className="forge-input" type="number" value={year}
-                   onChange={e => setYear(+e.target.value)} />
+            <input className="forge-input" type="number" value={year} onChange={e => setYear(+e.target.value)} />
           </div>
           <div>
             <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--forge-subtle)' }}>Month</label>
@@ -559,7 +550,7 @@ function FilterChip({ label, active, color, onClick }: {
   return (
     <button
       onClick={onClick}
-      className="text-xs px-2 py-0.5 rounded-full border transition-colors"
+      className="px-2 py-0.5 rounded-full border transition-colors"
       style={{
         background: active ? (color ?? 'var(--forge-accent)') : 'transparent',
         borderColor: color ?? 'var(--forge-border)',
@@ -577,11 +568,4 @@ function formatFantasyDate(date: FantasyDate, calendar: CalendarSchema | null): 
   if (!calendar) return `Year ${date.year}, Month ${date.month}, Day ${date.day}`;
   const month = calendar.months[date.month - 1];
   return `${month?.name ?? `Month ${date.month}`} ${date.day}, Year ${date.year}`;
-}
-
-function useState<T>(init: T | (() => T)): [T, React.Dispatch<React.SetStateAction<T>>] {
-  return require("react").useState(init);
-}
-function useEffect(fn: () => void | (() => void), deps?: unknown[]) {
-  return require("react").useEffect(fn, deps);
 }

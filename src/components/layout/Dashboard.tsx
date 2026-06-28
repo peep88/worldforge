@@ -1,4 +1,5 @@
 // src/components/layout/Dashboard.tsx
+import React from "react";
 import { BookOpen, Map, Clock, CalendarDays, FileText, Plus } from "lucide-react";
 import { useAppStore } from "@/store";
 import type { World, ActiveModule } from "@/types";

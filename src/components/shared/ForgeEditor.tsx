@@ -1,7 +1,7 @@
 // src/components/shared/ForgeEditor.tsx
 // TipTap editor with [[WikiLink]] support, mentions, and full formatting
 
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";

@@ -282,8 +282,8 @@ function MonthGrid({ month, weekdays, year, monthIdx, daysPerWeek }: {
               minHeight: '40px',
               cursor: day ? 'pointer' : 'default',
             }}
-            onMouseEnter={e => { if (day) (e.currentTarget.style.borderColor = 'var(--forge-accent)'); }}
-            onMouseLeave={e => { if (day) (e.currentTarget.style.borderColor = 'var(--forge-border)'); }}
+            onMouseEnter={e => { if (day) (e.currentTarget as HTMLElement).style.borderColor = 'var(--forge-accent)'; }}
+            onMouseLeave={e => { if (day) (e.currentTarget as HTMLElement).style.borderColor = 'var(--forge-border)'; }}
           >
             {day}
           </div>

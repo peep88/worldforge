@@ -1,5 +1,5 @@
 // src/components/layout/Sidebar.tsx
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   BookOpen, Map, Clock, CalendarDays,
   FileText, Home, Plus, ChevronRight,

@@ -1,5 +1,5 @@
 // src/components/wiki/WikiModule.tsx
-import { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   Plus, BookOpen, Users, MapPin, Shield, Package,
   Link2, Trash2, ChevronRight, ArrowLeft
@@ -7,7 +7,7 @@ import {
 import { useAppStore } from "@/store";
 import { pagesDb } from "@/lib/db";
 import ForgeEditor from "@/components/shared/ForgeEditor";
-import type { Page, TemplateType } from "@/types";
+import type { Page, TemplateType, Category } from "@/types";
 
 const TEMPLATE_ICONS: Record<string, React.ReactNode> = {
   character: <Users size={14} />,
@@ -144,7 +144,6 @@ export default function WikiModule() {
           <NewPagePanel onCancel={() => setShowNew(false)} onCreate={createPage} />
         ) : activePage ? (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Wiki header */}
             <div
               className="flex items-center justify-between px-6 py-3 shrink-0"
               style={{ borderBottom: '1px solid var(--forge-border)' }}
@@ -170,17 +169,13 @@ export default function WikiModule() {
                 >
                   <Link2 size={12} /> {backlinks.length} links
                 </button>
-                <button
-                  onClick={() => deletePage(activePage)}
-                  className="forge-btn forge-btn-ghost p-1.5"
-                >
+                <button onClick={() => deletePage(activePage)} className="forge-btn forge-btn-ghost p-1.5">
                   <Trash2 size={13} style={{ color: 'var(--forge-danger)' }} />
                 </button>
               </div>
             </div>
 
             <div className="flex flex-1 overflow-hidden">
-              {/* Editor */}
               <div className="flex-1 overflow-hidden">
                 <ForgeEditor
                   key={activePage.id}
@@ -191,7 +186,6 @@ export default function WikiModule() {
                 />
               </div>
 
-              {/* Backlinks panel */}
               {showBacklinks && (
                 <div
                   className="w-56 shrink-0 overflow-y-auto p-3"
@@ -207,10 +201,10 @@ export default function WikiModule() {
                     <button
                       key={link.id}
                       onClick={() => openPage(link)}
-                      className="w-full text-left text-xs px-2 py-1.5 rounded mb-1 hover:bg-opacity-50"
+                      className="w-full text-left text-xs px-2 py-1.5 rounded mb-1"
                       style={{ color: 'var(--forge-accent)' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--forge-muted)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--forge-muted)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                     >
                       ← {link.title}
                     </button>
@@ -235,7 +229,6 @@ export default function WikiModule() {
   );
 }
 
-// ── Sub-components ──
 function WikiPageItem({ page, active, onClick }: { page: Page; active: boolean; onClick: () => void }) {
   return (
     <button
@@ -246,10 +239,12 @@ function WikiPageItem({ page, active, onClick }: { page: Page; active: boolean; 
         borderLeft: active ? '2px solid var(--forge-accent)' : '2px solid transparent',
         color: active ? 'var(--forge-accent)' : 'var(--forge-text)',
       }}
-      onMouseEnter={e => { if (!active) (e.currentTarget.style.background = 'var(--forge-elevated)'; }}
-      onMouseLeave={e => { if (!active) (e.currentTarget.style.background = 'transparent'; }}
+      onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--forge-elevated)'; }}
+      onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
     >
-      {page.template_type && <span style={{ color: 'var(--forge-subtle)' }}>{TEMPLATE_ICONS[page.template_type]}</span>}
+      {page.template_type && (
+        <span style={{ color: 'var(--forge-subtle)' }}>{TEMPLATE_ICONS[page.template_type]}</span>
+      )}
       <span className="truncate">{page.title}</span>
     </button>
   );
@@ -327,7 +322,7 @@ function NewPagePanel({
   );
 }
 
-function groupByCategory(pages: Page[], categories: import("@/types").Category[]) {
+function groupByCategory(pages: Page[], categories: Category[]): Record<string, Page[]> {
   const catMap = Object.fromEntries(categories.map(c => [c.id, c.name]));
   const groups: Record<string, Page[]> = { Uncategorized: [] };
   for (const page of pages) {
@@ -336,9 +331,4 @@ function groupByCategory(pages: Page[], categories: import("@/types").Category[]
     groups[cat].push(page);
   }
   return groups;
-}
-
-function useState<T>(initial: T): [T, (v: T) => void] {
-  const s = require("react").useState(initial);
-  return s;
 }

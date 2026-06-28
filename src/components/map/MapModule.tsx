@@ -1,7 +1,7 @@
 // src/components/map/MapModule.tsx
 // Fantasy map editor using React Konva
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Stage, Layer, Line, Rect, Ellipse, Text, Circle } from "react-konva";
 import {
   Pencil, Square, Circle as CircleIcon, Type, Eraser,
