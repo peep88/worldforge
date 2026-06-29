@@ -16,13 +16,21 @@ export default function WorldPicker({ worlds, onWorldCreated }: Props) {
   const [loading, setLoading] = useState(false);
 
   async function handleCreate() {
-    if (!name.trim()) return;
-    setLoading(true);
+  if (!name.trim()) return;
+  setLoading(true);
+  try {
     const id = await worldsDb.create(name.trim(), desc.trim());
+    console.log("Created world with id:", id);
     const world = await worldsDb.get(id);
+    console.log("Fetched world:", world);
     if (world) onWorldCreated(world);
+  } catch (e) {
+    console.error("Failed to create world:", e);
+    alert("Error creating world: " + String(e));
+  } finally {
     setLoading(false);
   }
+}
 
   return (
     <div

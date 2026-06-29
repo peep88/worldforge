@@ -10,7 +10,13 @@ let _db: Database | null = null;
 
 export async function getDb(): Promise<Database> {
   if (!_db) {
-    _db = await Database.load("sqlite:worldforge.db");
+    try {
+      _db = await Database.load("sqlite:worldforge.db");
+      console.log("DB connected successfully");
+    } catch (e) {
+      console.error("DB connection failed:", e);
+      throw e;
+    }
   }
   return _db;
 }
