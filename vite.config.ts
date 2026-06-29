@@ -9,16 +9,16 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Tauri expects a fixed port
   server: {
     port: 1420,
     strictPort: true,
+    watch: {
+      ignored: (filePath: string) => filePath.includes("src-tauri\\target") || filePath.includes("src-tauri/target"),
+    },
   },
-  // to make use of `TAURI_DEBUG` and other env variables
   envPrefix: ["VITE_", "TAURI_"],
   build: {
-    // Tauri supports es2021
-    target: process.env.TAURI_PLATFORM == "windows" ? "chrome105" : "safari13",
+    target: "chrome105",
     minify: !process.env.TAURI_DEBUG ? "esbuild" : false,
     sourcemap: !!process.env.TAURI_DEBUG,
   },

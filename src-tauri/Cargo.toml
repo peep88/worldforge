@@ -5,6 +5,10 @@ description = "WorldForge - Fantasy World Building Desktop App"
 authors = ["you"]
 edition = "2021"
 
+[package.metadata.bundle]
+name = "WorldForge"
+identifier = "com.worldforge.app"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
