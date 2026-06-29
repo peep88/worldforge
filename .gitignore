@@ -1,0 +1,16 @@
+# Rust build output — never commit this
+src-tauri/target/
+
+# Node modules
+node_modules/
+
+# Vite build output
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local env
+.env
+.env.local
