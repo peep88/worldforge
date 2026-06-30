@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   BookOpen, Map as MapIcon, Clock, CalendarDays,
   FileText, Home, Plus, ChevronRight,
-  Search, Globe, Folder, FolderOpen
+  Search, Globe, Folder, FolderOpen, Copy, ClipboardPaste, Scissors
 } from "lucide-react";
 import { useAppStore } from "@/store";
 import { pagesDb, categoriesDb, tagsDb } from "@/lib/db";
@@ -19,6 +19,7 @@ const NAV_ITEMS: { id: ActiveModule; icon: React.ReactNode; label: string }[] = 
 ];
 
 type CategoryNode = Omit<Category, 'children'> & { children: CategoryNode[] };
+type PageClipboard = { mode: 'copy' | 'move'; page: Page } | null;
 
 export default function Sidebar() {
   const {
@@ -27,6 +28,7 @@ export default function Sidebar() {
     setSearchOpen, sidebarWidth,
   } = useAppStore();
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({ uncategorized: true });
+  const [pageClipboard, setPageClipboard] = useState<PageClipboard>(null);
 
   useEffect(() => {
     if (!activeWorld) return;
@@ -102,6 +104,45 @@ export default function Sidebar() {
       [id]: true,
       ...(parentId ? { [parentId]: true } : {}),
     }));
+  }
+
+
+  async function pastePage(categoryId: string | null) {
+    if (!pageClipboard) return;
+
+    if (pageClipboard.mode === 'move') {
+      const updatedPage = { ...pageClipboard.page, category_id: categoryId };
+      await pagesDb.update(pageClipboard.page.id, { category_id: categoryId });
+      useAppStore.getState().upsertPage(updatedPage);
+      if (useAppStore.getState().activePage?.id === updatedPage.id) {
+        useAppStore.getState().setActivePage(updatedPage);
+      }
+      setPageClipboard(null);
+    } else {
+      const source = pageClipboard.page;
+      const id = await pagesDb.create({
+        world_id: source.world_id,
+        title: source.title + ' Copy',
+        type: source.type,
+        template_type: source.template_type,
+        category_id: categoryId,
+      });
+      await pagesDb.update(id, {
+        content_json: source.content_json,
+        infobox_json: source.infobox_json,
+        cover_image: source.cover_image,
+        is_pinned: 0,
+      });
+      const copiedPage = await pagesDb.get(id);
+      if (copiedPage) {
+        useAppStore.getState().upsertPage(copiedPage);
+        useAppStore.getState().setActiveModule(copiedPage.type === 'note' ? 'notes' : 'wiki');
+        useAppStore.getState().setActivePage(copiedPage);
+      }
+    }
+
+    if (categoryId) setExpandedFolders((current) => ({ ...current, [categoryId]: true }));
+    else setExpandedFolders((current) => ({ ...current, uncategorized: true }));
   }
 
   const folderTree = useMemo(() => buildCategoryTree(categories), [categories]);
@@ -195,7 +236,7 @@ export default function Sidebar() {
         <div className="px-2 mt-2">
           <SectionLabel>Pinned</SectionLabel>
           {pinnedPages.map(page => (
-            <PageItem key={page.id} page={page} />
+            <PageItem key={page.id} page={page} clipboard={pageClipboard} setClipboard={setPageClipboard} />
           ))}
         </div>
       )}
@@ -222,6 +263,9 @@ export default function Sidebar() {
             toggleFolder={(id) => setExpandedFolders((current) => ({ ...current, [id]: !current[id] }))}
             createFolder={createFolder}
             createPage={createPage}
+            clipboard={pageClipboard}
+            setClipboard={setPageClipboard}
+            pastePage={pastePage}
           />
         ))}
 
@@ -237,11 +281,14 @@ export default function Sidebar() {
               onCreateFolder={() => createFolder(null)}
               onCreateNote={() => createPage('note')}
               onCreateWiki={() => createPage('wiki')}
+              canPaste={!!pageClipboard}
+              pasteMode={pageClipboard?.mode ?? null}
+              onPaste={() => pastePage(null)}
             />
             {expandedFolders.uncategorized && (
               <div>
                 {uncategorizedPages.map((page) => (
-                  <PageItem key={page.id} page={page} depth={1} />
+                  <PageItem key={page.id} page={page} depth={1} clipboard={pageClipboard} setClipboard={setPageClipboard} />
                 ))}
                 {pages.length === 0 && (
                   <p className="text-xs px-2 py-2" style={{ color: 'var(--forge-muted)' }}>
@@ -265,6 +312,9 @@ function FolderNode({
   toggleFolder,
   createFolder,
   createPage,
+  clipboard,
+  setClipboard,
+  pastePage,
 }: {
   category: CategoryNode;
   depth: number;
@@ -273,6 +323,9 @@ function FolderNode({
   toggleFolder: (id: string) => void;
   createFolder: (parentId: string | null) => void;
   createPage: (type: PageType, categoryId: string | null) => void;
+  clipboard: PageClipboard;
+  setClipboard: React.Dispatch<React.SetStateAction<PageClipboard>>;
+  pastePage: (categoryId: string | null) => void;
 }) {
   const pages = pagesByCategory.get(category.id) ?? [];
   const expanded = expandedFolders[category.id] ?? true;
@@ -289,6 +342,9 @@ function FolderNode({
         onCreateFolder={() => createFolder(category.id)}
         onCreateNote={() => createPage('note', category.id)}
         onCreateWiki={() => createPage('wiki', category.id)}
+        canPaste={!!clipboard}
+        pasteMode={clipboard?.mode ?? null}
+        onPaste={() => pastePage(category.id)}
       />
       {expanded && (
         <div>
@@ -302,10 +358,13 @@ function FolderNode({
               toggleFolder={toggleFolder}
               createFolder={createFolder}
               createPage={createPage}
+              clipboard={clipboard}
+              setClipboard={setClipboard}
+              pastePage={pastePage}
             />
           ))}
           {pages.map((page) => (
-            <PageItem key={page.id} page={page} depth={depth + 1} />
+            <PageItem key={page.id} page={page} depth={depth + 1} clipboard={clipboard} setClipboard={setClipboard} />
           ))}
         </div>
       )}
@@ -322,6 +381,9 @@ function FolderRow({
   onCreateFolder,
   onCreateNote,
   onCreateWiki,
+  canPaste = false,
+  pasteMode,
+  onPaste,
 }: {
   id?: string;
   label: string;
@@ -332,6 +394,9 @@ function FolderRow({
   onCreateFolder: () => void;
   onCreateNote: () => void;
   onCreateWiki: () => void;
+  canPaste?: boolean;
+  pasteMode?: 'copy' | 'move' | null;
+  onPaste?: () => void;
 }) {
   return (
     <div
@@ -357,6 +422,11 @@ function FolderRow({
         <IconButton title="New subfolder" onClick={onCreateFolder}><Folder size={11} /></IconButton>
         <IconButton title="New note" onClick={onCreateNote}><FileText size={11} /></IconButton>
         <IconButton title="New wiki page" onClick={onCreateWiki}><BookOpen size={11} /></IconButton>
+        {canPaste && onPaste && (
+          <IconButton title={pasteMode === 'move' ? 'Paste moved page here' : 'Paste copied page here'} onClick={onPaste}>
+            <ClipboardPaste size={11} />
+          </IconButton>
+        )}
       </div>
     </div>
   );
@@ -380,17 +450,24 @@ function IconButton({ title, onClick, children }: { title: string; onClick: () =
   );
 }
 
-function PageItem({ page, depth = 0 }: { page: Page; depth?: number }) {
+function PageItem({
+  page,
+  depth = 0,
+  clipboard,
+  setClipboard,
+}: {
+  page: Page;
+  depth?: number;
+  clipboard: PageClipboard;
+  setClipboard: React.Dispatch<React.SetStateAction<PageClipboard>>;
+}) {
   const { activePage, setActivePage, setActiveModule } = useAppStore();
   const active = activePage?.id === page.id;
+  const clipboardMode = clipboard?.page.id === page.id ? clipboard.mode : null;
 
   return (
-    <button
-      onClick={() => {
-        setActiveModule(page.type === 'note' ? 'notes' : 'wiki');
-        setActivePage(page);
-      }}
-      className="w-full flex items-center gap-2 py-1.5 pr-2 rounded text-left text-xs transition-colors mb-0.5"
+    <div
+      className="group flex items-center gap-1 rounded text-xs transition-colors mb-0.5"
       style={{
         color: active ? 'var(--forge-accent)' : 'var(--forge-text)',
         background: active ? 'var(--forge-muted)' : 'transparent',
@@ -398,13 +475,35 @@ function PageItem({ page, depth = 0 }: { page: Page; depth?: number }) {
       }}
       onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--forge-muted)'; }}
       onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-      title={page.title}
     >
-      <span className="shrink-0" style={{ color: 'var(--forge-subtle)' }}>
-        {page.type === 'note' ? <FileText size={12} /> : <BookOpen size={12} />}
-      </span>
-      <span className="truncate">{page.title}</span>
-    </button>
+      <button
+        onClick={() => {
+          setActiveModule(page.type === 'note' ? 'notes' : 'wiki');
+          setActivePage(page);
+        }}
+        className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-1 text-left"
+        title={page.title}
+      >
+        <span className="shrink-0" style={{ color: 'var(--forge-subtle)' }}>
+          {page.type === 'note' ? <FileText size={12} /> : <BookOpen size={12} />}
+        </span>
+        <span className="truncate">{page.title}</span>
+      </button>
+      <div className="flex shrink-0 items-center gap-0.5 pr-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        <IconButton
+          title={clipboardMode === 'move' ? 'Marked to move' : 'Move'}
+          onClick={() => setClipboard({ mode: 'move', page })}
+        >
+          <Scissors size={11} />
+        </IconButton>
+        <IconButton
+          title={clipboardMode === 'copy' ? 'Marked to copy' : 'Copy'}
+          onClick={() => setClipboard({ mode: 'copy', page })}
+        >
+          <Copy size={11} />
+        </IconButton>
+      </div>
+    </div>
   );
 }
 
