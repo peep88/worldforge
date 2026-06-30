@@ -2,7 +2,7 @@
 
 import Database from "@tauri-apps/plugin-sql";
 import type {
-  World, Calendar, Category, Tag, Page, PageLink,
+  World, Calendar, Category, Tag, Page,
   WorldMap, MapPin, TimelineEvent
 } from "@/types";
 
@@ -169,12 +169,12 @@ export const categoriesDb = {
     );
   },
 
-  async create(data: Omit<Category, 'id' | 'children'>): Promise<string> {
+  async create(data: Omit<Category, 'id' | 'children' | 'sort_order'> & { sort_order?: number }): Promise<string> {
     const db = await getDb();
     const id = crypto.randomUUID();
     await db.execute(
-      "INSERT INTO categories (id, world_id, name, icon, color, parent_id) VALUES ($1,$2,$3,$4,$5,$6)",
-      [id, data.world_id, data.name, data.icon, data.color, data.parent_id]
+      "INSERT INTO categories (id, world_id, name, icon, color, parent_id, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)",
+      [id, data.world_id, data.name, data.icon, data.color, data.parent_id, data.sort_order ?? 0]
     );
     return id;
   },
