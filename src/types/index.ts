@@ -165,7 +165,7 @@ export interface MapLayer {
 
 export interface KonvaObject {
   id: string;
-  type: 'line' | 'rect' | 'ellipse' | 'text' | 'image' | 'polygon';
+  type: 'line' | 'rect' | 'ellipse' | 'text' | 'image' | 'polygon' | 'terrain' | 'icon';
   attrs: Record<string, unknown>;
 }
 
@@ -222,7 +222,8 @@ export type ActiveModule =
   | 'wiki'
   | 'map'
   | 'timeline'
-  | 'calendar';
+  | 'calendar'
+  | 'graph';
 
 export interface AppState {
   activeWorldId: string | null;

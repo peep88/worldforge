@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useRef } from "react";
 import {
   Plus, BookOpen, Users, MapPin, Shield, Package,
-  Link2, Trash2, ChevronRight, ArrowLeft
+  Link2, Trash2, ChevronRight, ArrowLeft, ImagePlus, X
 } from "lucide-react";
 import { useAppStore } from "@/store";
 import { pagesDb } from "@/lib/db";
@@ -33,6 +33,7 @@ export default function WikiModule() {
   const [backlinks, setBacklinks] = useState<Page[]>([]);
   const [showBacklinks, setShowBacklinks] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const grouped = groupByCategory(wikiPages, categories);
 
@@ -91,6 +92,29 @@ export default function WikiModule() {
     await pagesDb.delete(page.id);
     removePage(page.id);
     setActivePage(null);
+  }
+
+  function handleCoverUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !file.type.startsWith("image/") || !activePage) return;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const coverImage = typeof reader.result === "string" ? reader.result : null;
+      if (!coverImage) return;
+      const updatedPage = { ...activePage, cover_image: coverImage };
+      upsertPage(updatedPage);
+      await pagesDb.update(activePage.id, { cover_image: coverImage });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function removeCover() {
+    if (!activePage) return;
+    const updatedPage = { ...activePage, cover_image: null };
+    upsertPage(updatedPage);
+    await pagesDb.update(activePage.id, { cover_image: null });
   }
 
   return (
@@ -177,6 +201,37 @@ export default function WikiModule() {
 
             <div className="flex flex-1 overflow-hidden">
               <div className="flex-1 overflow-hidden">
+                <div className="relative mx-6 mt-4 h-32 overflow-hidden rounded border"
+                     style={{ borderColor: 'var(--forge-border)', background: 'var(--forge-elevated)' }}>
+                  {activePage.cover_image ? (
+                    <img src={activePage.cover_image} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs"
+                         style={{ color: 'var(--forge-muted)' }}>
+                      Add a cover image to give this page a visual identity
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 right-2 flex gap-1">
+                    <button
+                      onClick={() => coverInputRef.current?.click()}
+                      className="forge-btn forge-btn-outline text-xs"
+                    >
+                      <ImagePlus size={12} /> {activePage.cover_image ? "Change cover" : "Add cover"}
+                    </button>
+                    {activePage.cover_image && (
+                      <button onClick={() => void removeCover()} className="forge-btn forge-btn-ghost p-1.5" title="Remove cover">
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={handleCoverUpload}
+                    className="hidden"
+                  />
+                </div>
                 <ForgeEditor
                   key={activePage.id}
                   content={activePage.content_json}

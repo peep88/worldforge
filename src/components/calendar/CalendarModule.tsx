@@ -1,12 +1,12 @@
 // src/components/calendar/CalendarModule.tsx
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
-  CalendarDays, Plus, Trash2, Save, ChevronLeft,
-  ChevronRight, Settings, Moon, Sun, Star
+  Plus, Trash2, Save, ChevronLeft,
+  ChevronRight, Moon, Star
 } from "lucide-react";
 import { useAppStore } from "@/store";
 import { calendarDb } from "@/lib/db";
-import type { CalendarSchema, CalendarMonth, CalendarWeekday, CalendarEra, FantasyDate } from "@/types";
+import type { CalendarSchema, CalendarMonth, CalendarWeekday, CalendarEra } from "@/types";
 
 const DEFAULT_SCHEMA: CalendarSchema = {
   epochName: "Age of Stars",
@@ -127,7 +127,7 @@ export default function CalendarModule() {
           {tab === "build" ? (
             <CalendarBuilder schema={schema} onChange={setSchema} name={calendarName} onNameChange={setCalendarName} />
           ) : (
-            <CalendarStats schema={schema} year={currentYear} monthIdx={currentMonthIdx} />
+            <CalendarStats schema={schema} year={currentYear} />
           )}
         </div>
 
@@ -294,11 +294,10 @@ function MonthGrid({ month, weekdays, year, monthIdx, daysPerWeek }: {
 }
 
 // ── Stats panel ──
-function CalendarStats({ schema, year, monthIdx }: {
-  schema: CalendarSchema; year: number; monthIdx: number;
+function CalendarStats({ schema, year }: {
+  schema: CalendarSchema; year: number;
 }) {
   const normalMonths = schema.months.filter(m => !m.intercalary);
-  const intercalaryMonths = schema.months.filter(m => m.intercalary);
   const totalDays = schema.months.reduce((sum, m) => sum + m.days, 0);
   const currentEra = schema.eras.find(e =>
     year >= e.startYear && (e.endYear === null || year <= e.endYear)

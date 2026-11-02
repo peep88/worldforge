@@ -2,17 +2,20 @@
 // Fantasy map editor using React Konva
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { Stage, Layer, Line, Rect, Ellipse, Text, Circle } from "react-konva";
+import { Stage, Layer, Line, Rect, Ellipse, Text, Circle, Image as KonvaImage } from "react-konva";
 import {
   Pencil, Square, Circle as CircleIcon, Type, Eraser,
   Layers, Plus, Save, Trash2, MapPin, Eye, EyeOff, Lock, Unlock,
-  MousePointer, ZoomIn, ZoomOut
+  MousePointer, ZoomIn, ZoomOut, Mountain, Trees, Castle, Waves,
+  Landmark, CircleDot
 } from "lucide-react";
 import { useAppStore } from "@/store";
 import { mapsDb } from "@/lib/db";
 import type { WorldMap, MapCanvas, MapLayer, KonvaObject } from "@/types";
 
-type Tool = "select" | "pencil" | "rect" | "ellipse" | "text" | "eraser" | "pin";
+type Tool = "select" | "pencil" | "terrain" | "rect" | "ellipse" | "text" | "eraser" | "pin";
+type TerrainType = "water" | "forest" | "mountain" | "desert" | "swamp";
+type MapIcon = "city" | "castle" | "ruin" | "village" | "mountain" | "forest";
 
 const CANVAS_W = 3000;
 const CANVAS_H = 1800;
@@ -32,6 +35,12 @@ export default function MapModule() {
   const [tool, setTool] = useState<Tool>("pencil");
   const [color, setColor] = useState("#4a8c5c");
   const [strokeWidth, setStrokeWidth] = useState(4);
+  const [terrainType, setTerrainType] = useState<TerrainType>("forest");
+  const [terrainSize, setTerrainSize] = useState(90);
+  const [iconType, setIconType] = useState<MapIcon>("city");
+  const [iconLabel, setIconLabel] = useState("");
+  const [iconImage, setIconImage] = useState<string | null>(null);
+  const iconInputRef = useRef<HTMLInputElement>(null);
   const [activeLayerId, setActiveLayerId] = useState("base");
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentLine, setCurrentLine] = useState<number[]>([]);
@@ -42,6 +51,21 @@ export default function MapModule() {
     "#4a8c5c", "#c4933f", "#3d7ab5", "#8b6fad",
     "#c0392b", "#e8dcc8", "#2e2a24", "#ffffff",
   ];
+  const TERRAIN_STYLES: Record<TerrainType, { label: string; color: string; icon: React.ReactNode }> = {
+    water: { label: "Water", color: "#2f6f9f", icon: <Waves size={14} /> },
+    forest: { label: "Forest", color: "#356b46", icon: <Trees size={14} /> },
+    mountain: { label: "Mountain", color: "#8b8170", icon: <Mountain size={14} /> },
+    desert: { label: "Desert", color: "#b88a4a", icon: <CircleDot size={14} /> },
+    swamp: { label: "Swamp", color: "#536b45", icon: <Waves size={14} /> },
+  };
+  const ICONS: Record<MapIcon, { label: string; glyph: string; icon: React.ReactNode }> = {
+    city: { label: "City", glyph: "◆", icon: <Landmark size={14} /> },
+    castle: { label: "Castle", glyph: "♜", icon: <Castle size={14} /> },
+    ruin: { label: "Ruin", glyph: "✥", icon: <Mountain size={14} /> },
+    village: { label: "Village", glyph: "●", icon: <CircleDot size={14} /> },
+    mountain: { label: "Peak", glyph: "▲", icon: <Mountain size={14} /> },
+    forest: { label: "Grove", glyph: "♣", icon: <Trees size={14} /> },
+  };
 
   useEffect(() => {
     if (activeWorld) loadMaps();
@@ -110,6 +134,23 @@ export default function MapModule() {
     if (tool === "pencil" || tool === "eraser") {
       setIsDrawing(true);
       setCurrentLine([worldPos.x, worldPos.y]);
+    } else if (tool === "terrain") {
+      addTerrain(worldPos.x, worldPos.y);
+    } else if (tool === "pin") {
+      addIcon(worldPos.x, worldPos.y);
+    } else if (tool === "text") {
+      const label = prompt("Label for this location:", "Unnamed place")?.trim();
+      if (label) {
+        addObject({
+          id: crypto.randomUUID(),
+          type: "text",
+          attrs: {
+            x: worldPos.x, y: worldPos.y, text: label,
+            fill: color, fontSize: 22, fontFamily: "Cinzel",
+            shadowColor: "#000000", shadowBlur: 4, shadowOffset: { x: 1, y: 1 },
+          },
+        });
+      }
     } else if (tool === "rect") {
       const obj: KonvaObject = {
         id: crypto.randomUUID(),
@@ -125,6 +166,57 @@ export default function MapModule() {
       };
       addObject(obj);
     }
+
+    function addTerrain(x: number, y: number) {
+      const terrain = TERRAIN_STYLES[terrainType];
+      addObject({
+        id: crypto.randomUUID(),
+        type: "terrain",
+        attrs: {
+          x, y, radius: terrainSize, fill: terrain.color, opacity: 0.62,
+          stroke: terrain.color, strokeWidth: 3,
+        },
+      });
+    }
+
+    function addIcon(x: number, y: number) {
+      const icon = ICONS[iconType];
+      if (iconImage) {
+        addObject({
+          id: crypto.randomUUID(),
+          type: "image",
+          attrs: {
+            x: x - 24, y: y - 24, width: 48, height: 48,
+            src: iconImage, label: iconLabel.trim() || icon.label,
+          },
+        });
+        return;
+      }
+      addObject({
+        id: crypto.randomUUID(),
+        type: "icon",
+        attrs: {
+          x, y, text: `${icon.glyph}${iconLabel.trim() ? ` ${iconLabel.trim()}` : ""}`,
+          fill: color, fontSize: 28, fontFamily: "serif",
+          align: "center", offsetX: iconLabel.trim() ? 0 : 14, offsetY: 14,
+          shadowColor: "#000000", shadowBlur: 5, shadowOffset: { x: 1, y: 1 },
+        },
+      });
+    }
+  }
+
+  function handleIconUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setIconImage(reader.result);
+        setTool("pin");
+      }
+    };
+    reader.readAsDataURL(file);
   }
 
   function handleMouseMove(e: any) {
@@ -209,6 +301,7 @@ export default function MapModule() {
   const TOOLS: { id: Tool; icon: React.ReactNode; label: string }[] = [
     { id: "select",  icon: <MousePointer size={15} />, label: "Select" },
     { id: "pencil",  icon: <Pencil size={15} />, label: "Draw" },
+    { id: "terrain", icon: <Mountain size={15} />, label: "Terrain" },
     { id: "eraser",  icon: <Eraser size={15} />, label: "Erase" },
     { id: "rect",    icon: <Square size={15} />, label: "Rectangle" },
     { id: "ellipse", icon: <CircleIcon size={15} />, label: "Ellipse" },
@@ -267,6 +360,84 @@ export default function MapModule() {
         <div className="p-2 border-b" style={{ borderColor: 'var(--forge-border)' }}>
           <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--forge-subtle)' }}>
             Color
+          </div>
+
+          <div className="p-2 border-b" style={{ borderColor: 'var(--forge-border)' }}>
+            <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--forge-subtle)' }}>
+              Terrain brush
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              {(Object.keys(TERRAIN_STYLES) as TerrainType[]).map(type => (
+                <button
+                  key={type}
+                  onClick={() => { setTerrainType(type); setTool("terrain"); }}
+                  className="flex items-center gap-1.5 px-2 py-1.5 rounded text-xs"
+                  style={{
+                    background: terrainType === type && tool === "terrain" ? 'var(--forge-muted)' : 'transparent',
+                    color: terrainType === type && tool === "terrain" ? 'var(--forge-accent)' : 'var(--forge-subtle)',
+                  }}
+                >
+                  {TERRAIN_STYLES[type].icon} {TERRAIN_STYLES[type].label}
+                </button>
+              ))}
+            </div>
+            <div className="text-xs mt-2 mb-1" style={{ color: 'var(--forge-subtle)' }}>
+              Brush size: {terrainSize}
+            </div>
+            <input
+              type="range" min={30} max={240} step={10} value={terrainSize}
+              onChange={e => setTerrainSize(Number(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          <div className="p-2 border-b" style={{ borderColor: 'var(--forge-border)' }}>
+            <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--forge-subtle)' }}>
+              Map icons
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              {(Object.keys(ICONS) as MapIcon[]).map(type => (
+                <button
+                  key={type}
+                  onClick={() => { setIconType(type); setTool("pin"); }}
+                  title={ICONS[type].label}
+                  className="flex items-center justify-center gap-1 px-1 py-1.5 rounded text-xs"
+                  style={{
+                    background: iconType === type && tool === "pin" ? 'var(--forge-muted)' : 'transparent',
+                    color: iconType === type && tool === "pin" ? 'var(--forge-accent)' : 'var(--forge-subtle)',
+                  }}
+                >
+                  {ICONS[type].icon}
+                </button>
+              ))}
+            </div>
+            <input
+              className="forge-input text-xs mt-2"
+              placeholder="Optional icon label"
+              value={iconLabel}
+              onChange={e => setIconLabel(e.target.value)}
+            />
+            <button
+              onClick={() => iconInputRef.current?.click()}
+              className="forge-btn forge-btn-outline text-xs w-full justify-center mt-2"
+            >
+              <MapPin size={12} /> {iconImage ? "Replace uploaded icon" : "Upload custom icon"}
+            </button>
+            {iconImage && (
+              <div className="mt-2 flex items-center gap-2">
+                <img src={iconImage} alt="" className="h-7 w-7 rounded object-cover" />
+                <button onClick={() => setIconImage(null)} className="text-xs" style={{ color: 'var(--forge-danger)' }}>
+                  Remove custom icon
+                </button>
+              </div>
+            )}
+            <input
+              ref={iconInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+              onChange={handleIconUpload}
+              className="hidden"
+            />
           </div>
           <div className="grid grid-cols-4 gap-1 mb-2">
             {TOOL_COLORS.map(c => (
@@ -348,7 +519,7 @@ export default function MapModule() {
       </div>
 
       {/* Canvas */}
-      <div className="flex-1 relative overflow-hidden" style={{ background: '#0a0f0a', cursor: tool === 'pencil' ? 'crosshair' : 'default' }}>
+      <div className="flex-1 relative overflow-hidden" style={{ background: '#0a0f0a', cursor: tool === 'pencil' || tool === 'terrain' || tool === 'pin' ? 'crosshair' : 'default' }}>
         {/* Zoom controls */}
         <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
           <button onClick={() => zoom(1.2)} className="forge-btn forge-btn-ghost p-2 forge-panel">
@@ -455,7 +626,28 @@ function renderObject(obj: KonvaObject): React.ReactNode {
       return <Ellipse key={key} {...(obj.attrs as any)} />;
     case "text":
       return <Text key={key} {...(obj.attrs as any)} />;
+    case "terrain":
+      return <Ellipse key={key} {...(obj.attrs as any)} radiusX={(obj.attrs.radius as number) ?? 80} radiusY={(obj.attrs.radius as number) ?? 80} />;
+    case "icon":
+      return <Text key={key} {...(obj.attrs as any)} />;
+    case "image":
+      return <MapImage key={key} src={String(obj.attrs.src ?? "")} attrs={obj.attrs} />;
     default:
       return null;
   }
+}
+
+function MapImage({ src, attrs }: { src: string; attrs: Record<string, unknown> }) {
+  const [image, setImage] = React.useState<HTMLImageElement | null>(null);
+
+  React.useEffect(() => {
+    const nextImage = new window.Image();
+    nextImage.onload = () => setImage(nextImage);
+    nextImage.onerror = () => setImage(null);
+    nextImage.src = src;
+    return () => { nextImage.onload = null; nextImage.onerror = null; };
+  }, [src]);
+
+  if (!image) return null;
+  return <KonvaImage image={image} {...(attrs as any)} />;
 }

@@ -13,6 +13,7 @@ import WikiModule from "@/components/wiki/WikiModule";
 import MapModule from "@/components/map/MapModule";
 import TimelineModule from "@/components/timeline/TimelineModule";
 import CalendarModule from "@/components/calendar/CalendarModule";
+import GraphModule from "@/components/graph/GraphModule";
 
 export default function App() {
   const { activeWorld, activeModule, setActiveWorld, sidebarOpen } = useAppStore();
@@ -64,6 +65,7 @@ export default function App() {
       case "map":      return <MapModule />;
       case "timeline": return <TimelineModule />;
       case "calendar": return <CalendarModule />;
+      case "graph":    return <GraphModule />;
       default:         return <Dashboard worlds={worlds} onWorldChange={setActiveWorld} />;
     }
   };

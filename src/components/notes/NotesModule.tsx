@@ -1,5 +1,5 @@
 // src/components/notes/NotesModule.tsx
-import React, { useState, useCallback, useRef } from "react";
+import React, { useCallback, useRef } from "react";
 import { Plus, Pin, PinOff, Trash2, FileText } from "lucide-react";
 import { useAppStore } from "@/store";
 import { pagesDb } from "@/lib/db";

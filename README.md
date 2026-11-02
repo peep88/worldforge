@@ -10,10 +10,10 @@ No account needed. Your data lives on your machine.
 | Module | What it does |
 |---|---|
 | 📝 **Notes** | Quick rich-text notes with auto-save and pinning |
-| 📖 **Wiki** | Structured wiki pages with templates (Character, Location, Faction, Item, Event) |
+| 📖 **Wiki** | Structured wiki pages with templates, local cover images, and page links |
 | 🔗 **Wiki Links** | `[[PageTitle]]` syntax links pages together with backlink tracking |
 | 🗂️ **Categories & Tags** | Hierarchical categories + freeform tags for organizing everything |
-| 🗺️ **Map Editor** | Multi-layer canvas drawing tool (freehand, shapes, text) with zoom/pan |
+| 🗺️ **Map Editor** | Multi-layer map editor with terrain brushes, location icons, labels, shapes, and zoom/pan |
 | ⏱️ **Timeline** | Visual event timeline with fantasy date support and category filters |
 | 📅 **Calendar** | Fully customizable calendar: custom months, weekdays, eras, leap year rules |
 
@@ -63,7 +63,7 @@ Visual Studio Build Tools with C++ workload required.
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/yourname/worldforge
+git clone https://github.com/peep88/worldforge
 cd worldforge
 
 # 2. Install JS dependencies
@@ -141,10 +141,10 @@ World
 ## Roadmap (next features)
 
 - [ ] Global search with fuzzy matching (Fuse.js)
-- [ ] Knowledge graph view (React Flow — all wiki links visualized)
+- [x] Knowledge graph view (React Flow — all wiki links visualized)
 - [ ] Map pins linked to wiki pages (click pin → open page)
 - [ ] Export world to PDF or Markdown
-- [ ] Image uploads for page covers and map icons
+- [x] Image uploads for page covers and map icons
 - [ ] Multiple worlds with world-switcher
 - [ ] Infobox template editor (custom fields per entity type)
 - [ ] Mobile companion app (read-only, Tauri mobile)

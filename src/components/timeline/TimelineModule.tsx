@@ -1,5 +1,5 @@
 // src/components/timeline/TimelineModule.tsx
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2, Edit2, X, Link2, Calendar, Clock } from "lucide-react";
 import { useAppStore } from "@/store";
 import { timelineDb, calendarDb } from "@/lib/db";
@@ -134,7 +134,6 @@ export default function TimelineModule() {
         >
           <VisualTimeline
             events={sortedEvents}
-            calendar={calendar}
             selected={selected}
             onSelect={setSelected}
           />
@@ -190,9 +189,8 @@ export default function TimelineModule() {
 }
 
 // ── Visual Timeline ──
-function VisualTimeline({ events, calendar, selected, onSelect }: {
+function VisualTimeline({ events, selected, onSelect }: {
   events: TimelineEvent[];
-  calendar: CalendarSchema | null;
   selected: TimelineEvent | null;
   onSelect: (e: TimelineEvent) => void;
 }) {
@@ -415,7 +413,7 @@ function EventDetail({ event, calendar, pages, editing, onEdit, onSave, onCancel
         </div>
         <div>
           <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--forge-subtle)' }}>Category</label>
-          <select className="forge-input" value={category} onChange={e => setCategory(e.target.value)}>
+          <select className="forge-input" value={category} onChange={e => setCategory(e.target.value as EventCategory)}>
             {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}
@@ -469,7 +467,7 @@ function EventForm({ calendar, onSave, onCancel }: {
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("event");
+  const [category, setCategory] = useState<EventCategory>("event");
   const [year, setYear] = useState(1000);
   const [month, setMonth] = useState(1);
   const [day, setDay] = useState(1);
@@ -501,7 +499,7 @@ function EventForm({ calendar, onSave, onCancel }: {
         </div>
         <div>
           <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--forge-subtle)' }}>Category</label>
-          <select className="forge-input" value={category} onChange={e => setCategory(e.target.value)}>
+          <select className="forge-input" value={category} onChange={e => setCategory(e.target.value as EventCategory)}>
             {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}

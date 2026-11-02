@@ -2,7 +2,7 @@
 // TipTap editor with [[WikiLink]] support, mentions, and full formatting
 
 import React, { useEffect, useRef } from "react";
-import { useEditor, EditorContent, Extension } from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Typography from "@tiptap/extension-typography";
@@ -11,13 +11,12 @@ import Mention from "@tiptap/extension-mention";
 import { ReactRenderer } from "@tiptap/react";
 import tippy, { type Instance } from "tippy.js";
 import { useAppStore } from "@/store";
-import { pagesDb } from "@/lib/db";
 import type { Page } from "@/types";
 
 // ── Toolbar ──
 import {
   Bold, Italic, Strikethrough, Code, Heading1, Heading2, Heading3,
-  List, ListOrdered, Quote, Minus, Link as LinkIcon, Undo, Redo
+  List, ListOrdered, Quote, Minus, Undo, Redo
 } from "lucide-react";
 
 interface Props {

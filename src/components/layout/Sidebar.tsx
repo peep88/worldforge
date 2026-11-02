@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   BookOpen, Map as MapIcon, Clock, CalendarDays,
   FileText, Home, Plus, ChevronRight,
-  Search, Globe, Folder, FolderOpen, Copy, ClipboardPaste, Scissors
+  Search, Globe, Folder, FolderOpen, Copy, ClipboardPaste, Scissors, GitBranch
 } from "lucide-react";
 import { useAppStore } from "@/store";
 import { pagesDb, categoriesDb, tagsDb } from "@/lib/db";
@@ -16,6 +16,7 @@ const NAV_ITEMS: { id: ActiveModule; icon: React.ReactNode; label: string }[] = 
   { id: "map",       icon: <MapIcon size={16} />, label: "Map" },
   { id: "timeline",  icon: <Clock size={16} />, label: "Timeline" },
   { id: "calendar",  icon: <CalendarDays size={16} />, label: "Calendar" },
+  { id: "graph",     icon: <GitBranch size={16} />, label: "Knowledge Graph" },
 ];
 
 type CategoryNode = Omit<Category, 'children'> & { children: CategoryNode[] };

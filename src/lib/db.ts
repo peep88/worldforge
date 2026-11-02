@@ -12,7 +12,6 @@ export async function getDb(): Promise<Database> {
   if (!_db) {
     try {
       _db = await Database.load("sqlite:worldforge.db");
-      console.log("DB connected successfully");
     } catch (e) {
       console.error("DB connection failed:", e);
       throw e;
@@ -140,6 +139,21 @@ export const pagesDb = {
        JOIN page_links l ON l.source_id = p.id
        WHERE l.target_id = $1`,
       [pageId]
+    );
+  },
+
+  async getLinks(worldId: string): Promise<{ source_id: string; target_id: string }[]> {
+    const db = await getDb();
+    return db.select<{ source_id: string; target_id: string }[]>(
+      `SELECT l.source_id, l.target_id
+       FROM page_links l
+       JOIN pages source ON source.id = l.source_id
+       JOIN pages target ON target.id = l.target_id
+       WHERE source.world_id = $1
+         AND target.world_id = source.world_id
+         AND source.type = 'wiki'
+         AND target.type = 'wiki'`,
+      [worldId]
     );
   },
 

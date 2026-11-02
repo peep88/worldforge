@@ -9,6 +9,7 @@ const MODULE_LABELS: Record<string, string> = {
   map: "Map",
   timeline: "Timeline",
   calendar: "Calendar",
+  graph: "Knowledge Graph",
 };
 
 export default function TopBar() {
